@@ -1,6 +1,6 @@
-module github.com/araddon/dateparse
+module github.com/mehanizm/dateparse
 
-go 1.12
+go 1.16
 
 require (
 	github.com/mattn/go-runewidth v0.0.10 // indirect
