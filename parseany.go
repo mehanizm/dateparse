@@ -49,8 +49,10 @@ var months = []string{
 	"december",
 }
 
-type dateState uint8
-type timeState uint8
+type (
+	dateState uint8
+	timeState uint8
+)
 
 const (
 	dateStart dateState = iota // 0
@@ -94,6 +96,7 @@ const (
 	dateWeekdayComma
 	dateWeekdayAbbrevComma
 )
+
 const (
 	// Time state
 	timeIgnore timeState = iota // 0
@@ -130,11 +133,9 @@ const (
 	timeZDigit
 )
 
-var (
-	// ErrAmbiguousMMDD for date formats such as 04/02/2014 the mm/dd vs dd/mm are
-	// ambiguous, so it is an error for strict parse rules.
-	ErrAmbiguousMMDD = fmt.Errorf("This date has ambiguous mm/dd vs dd/mm type format")
-)
+// ErrAmbiguousMMDD for date formats such as 04/02/2014 the mm/dd vs dd/mm are
+// ambiguous, so it is an error for strict parse rules.
+var ErrAmbiguousMMDD = fmt.Errorf("This date has ambiguous mm/dd vs dd/mm type format")
 
 func unknownErr(datestr string) error {
 	return fmt.Errorf("Could not find format for %q", datestr)
@@ -233,7 +234,6 @@ func ParseStrict(datestr string, opts ...ParserOption) (time.Time, error) {
 }
 
 func parseTime(datestr string, loc *time.Location, opts ...ParserOption) (p *parser, err error) {
-
 	p = newParser(datestr, loc, opts...)
 	if p.retryAmbiguousDateWithSwap {
 		// month out of range signifies that a day/month swap is the correct solution to an ambiguous date
@@ -250,10 +250,9 @@ func parseTime(datestr string, loc *time.Location, opts ...ParserOption) (p *par
 					// turn off the retry to avoid endless recursion
 					retryAmbiguousDateWithSwap := RetryAmbiguousDateWithSwap(false)
 					modifiedOpts := append(opts, preferMonthFirst, retryAmbiguousDateWithSwap)
-					p, err = parseTime(datestr, time.Local, modifiedOpts...)
+					p, err = parseTime(datestr, loc, modifiedOpts...)
 				}
 			}
-
 		}()
 	}
 
@@ -265,7 +264,7 @@ func parseTime(datestr string, loc *time.Location, opts ...ParserOption) (p *par
 	// we figure it out and then attempt a parse
 iterRunes:
 	for ; i < len(datestr); i++ {
-		//r := rune(datestr[i])
+		// r := rune(datestr[i])
 		r, bytesConsumed := utf8.DecodeRuneInString(datestr[i:])
 		if bytesConsumed > 1 {
 			i += (bytesConsumed - 1)
@@ -673,7 +672,7 @@ iterRunes:
 			switch r {
 			case ' ':
 				p.yeari = i + 1
-				//p.yearlen = 4
+				// p.yearlen = 4
 				p.dayi = 0
 				p.daylen = p.part1Len
 				p.setDay()
@@ -1411,7 +1410,7 @@ iterRunes:
 				//     00:12:00 PST
 				//     15:44:11 UTC+0100 2015
 				if r == 'M' {
-					//return parse("2006-01-02 03:04:05 PM", datestr, loc)
+					// return parse("2006-01-02 03:04:05 PM", datestr, loc)
 					p.stateTime = timeWsAMPM
 					p.set(i-1, "PM")
 					if p.hourlen == 2 {
@@ -1716,7 +1715,6 @@ iterRunes:
 					// 13:31:51.999 +01:00 CEST
 					p.set(p.tzi, "MST ")
 				}
-
 			}
 		case timeWsOffsetColon:
 			// 17:57:51 -07:00
@@ -1773,7 +1771,7 @@ iterRunes:
 			if miliSecs, err := strconv.ParseInt(datestr, 10, 64); err == nil {
 				t = time.Unix(0, miliSecs*1000*1000)
 			}
-		} else if len(datestr) == len("1332151919") { //10
+		} else if len(datestr) == len("1332151919") { // 10
 			if secs, err := strconv.ParseInt(datestr, 10, 64); err == nil {
 				t = time.Unix(secs, 0)
 			}
@@ -2060,6 +2058,7 @@ func (p *parser) set(start int, val string) {
 		p.format[start+i] = byte(r)
 	}
 }
+
 func (p *parser) setMonth() {
 	if p.molen == 2 {
 		p.set(p.moi, "01")
@@ -2075,6 +2074,7 @@ func (p *parser) setDay() {
 		p.set(p.dayi, "2")
 	}
 }
+
 func (p *parser) setYear() {
 	if p.yearlen == 2 {
 		p.set(p.yeari, "06")
@@ -2082,6 +2082,7 @@ func (p *parser) setYear() {
 		p.set(p.yeari, "2006")
 	}
 }
+
 func (p *parser) coalesceDate(end int) {
 	if p.yeari > 0 {
 		if p.yearlen == 0 {
@@ -2098,12 +2099,15 @@ func (p *parser) coalesceDate(end int) {
 		p.setDay()
 	}
 }
+
 func (p *parser) ts() string {
 	return fmt.Sprintf("h:(%d:%d) m:(%d:%d) s:(%d:%d)", p.houri, p.hourlen, p.mini, p.minlen, p.seci, p.seclen)
 }
+
 func (p *parser) ds() string {
 	return fmt.Sprintf("%s d:(%d:%d) m:(%d:%d) y:(%d:%d)", p.datestr, p.dayi, p.daylen, p.moi, p.molen, p.yeari, p.yearlen)
 }
+
 func (p *parser) coalesceTime(end int) {
 	// 03:04:05
 	// 15:04:05
@@ -2144,6 +2148,7 @@ func (p *parser) coalesceTime(end int) {
 		}
 	}
 }
+
 func (p *parser) setFullMonth(month string) {
 	if p.moi == 0 {
 		p.format = []byte(fmt.Sprintf("%s%s", "January", p.format[len(month):]))
@@ -2184,9 +2189,10 @@ func (p *parser) parse() (time.Time, error) {
 		// gou.Debugf("parse layout=%q input=%q   \ntx, err := time.Parse(%q, %q)", string(p.format), p.datestr, string(p.format), p.datestr)
 		return time.Parse(string(p.format), p.datestr)
 	}
-	//gou.Debugf("parse layout=%q input=%q   \ntx, err := time.ParseInLocation(%q, %q, %v)", string(p.format), p.datestr, string(p.format), p.datestr, p.loc)
+	// gou.Debugf("parse layout=%q input=%q   \ntx, err := time.ParseInLocation(%q, %q, %v)", string(p.format), p.datestr, string(p.format), p.datestr, p.loc)
 	return time.ParseInLocation(string(p.format), p.datestr, p.loc)
 }
+
 func isDay(alpha string) bool {
 	for _, day := range days {
 		if alpha == day {
@@ -2195,6 +2201,7 @@ func isDay(alpha string) bool {
 	}
 	return false
 }
+
 func isMonthFull(alpha string) bool {
 	for _, month := range months {
 		if alpha == month {
